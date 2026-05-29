@@ -1,0 +1,6 @@
+# cctv-ce-agent camera list. Format: id,ip  (header + # comment lines ignored)
+# Copy to /etc/cctv-ce/cameras.csv and fill with REAL ids/IPs. Do NOT commit real IPs.
+id,ip
+CAM-001,10.0.0.11
+CAM-002,10.0.0.12
+CAM-003,10.0.0.13

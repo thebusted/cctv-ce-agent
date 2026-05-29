@@ -1,0 +1,8 @@
+# never leak real config / secrets / camera IPs
+.env
+*.env
+!.env.example
+cameras.csv
+!cameras.example.csv
+__pycache__/
+*.pyc
