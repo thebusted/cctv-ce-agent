@@ -43,7 +43,7 @@ def env(key, default=None, required=False):
 
 def ce_from_pdr(pdr):
     pdr = min(max(pdr, EPSILON), 1.0)
-    return -math.log(pdr)
+    return -math.log(pdr) + 0.0  # +0.0 normalizes -0.0 (PDR=1.0) to 0.0
 
 
 def ce_group(ce):
