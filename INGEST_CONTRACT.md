@@ -23,7 +23,8 @@ ingest-agnostic: point `INGEST_URL` at any endpoint that accepts this contract.
   "camera_count": 40,
   "cameras": [
     {"id": "CAM-001", "ip": "<ip>", "reachable": true,
-     "pdr": 0.99, "ce": 0.0101, "group": 1, "avg_rtt_ms": 0.6, "tx_bytes": 1234567},
+     "pdr": 0.99, "ce": 0.0101, "group": 1, "avg_rtt_ms": 0.6, "tx_bytes": 1234567,
+     "rtsp": {"ok": true, "bitrate_mbps": 12.6, "rtp_loss_events": 0}},
     {"id": "CAM-002", "ip": "<ip>", "reachable": false,
      "pdr": null, "ce": null, "group": null, "tx_bytes": null}
   ]
@@ -36,8 +37,8 @@ H(P,Q) traffic-anomaly CE; keep the two clearly separated in storage + UI).
 
 ## Suggested storage (new tables, do not reuse `bandwidth_metrics`)
 
-- `camera_ce(ts, server_id, camera_id, ip, pdr, ce, ce_group, avg_rtt_ms, tx_bytes)`
-  — PK `(ts, server_id, camera_id)`
+- `camera_ce(ts, server_id, camera_id, ip, pdr, ce, ce_group, avg_rtt_ms, tx_bytes, bitrate_mbps, rtp_loss_events)`
+  — PK `(ts, server_id, camera_id)`. `rtsp` object present only when `RTSP_PROBE=1`.
 - `egress_ce(ts, server_id, host, port, pdr, ce, ce_group, avg_rtt_ms, jitter_ms)`
 
 ## Response

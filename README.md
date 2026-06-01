@@ -11,6 +11,7 @@ and pushes results to a central endpoint. No secrets in this repo — everything
 | per-camera **PDR → CE = -ln(PDR)** → group 1-4 | `fping` per camera IP | classify cameras by link quality for bandwidth shaping |
 | **egress CE** (RTSP server → AWS Singapore) | `hping3` TCP SYN :443 | the real bottleneck that gates 4750/500 feasibility |
 | per-camera **TX bytes** | `conntrack` per source IP | feeds cost-per-camera / cost-per-request model |
+| per-camera **real bitrate + RTP loss** (`RTSP_PROBE=1`) | `ffmpeg` pulls the stream `RTSP_PROBE_SECS` | true Mbps/camera (metadata reports N/A) + video-path loss for recognition |
 
 It does **not** power-cycle cameras — flows are separated by IP, measured live in parallel.
 
@@ -37,6 +38,18 @@ journalctl -u cctv-ce -n 30 --no-pager
 ```
 
 Omit `INGEST_URL` to run in **dry-run** mode (prints JSON to stdout, sends nothing).
+
+Enable real per-camera bitrate (needs `rtsp_url` in `cameras.csv`): set `RTSP_PROBE=1` in `/etc/cctv-ce/.env`.
+
+## Update / Uninstall
+
+```bash
+# pull latest agent (keeps your .env + cameras.csv)
+curl -fsSL https://raw.githubusercontent.com/thebusted/cctv-ce-agent/main/update.sh | sudo bash
+
+# remove everything after the job (PURGE_DEPS=1 also removes fping/hping3/conntrack)
+curl -fsSL https://raw.githubusercontent.com/thebusted/cctv-ce-agent/main/uninstall.sh | sudo bash
+```
 
 ## Config
 

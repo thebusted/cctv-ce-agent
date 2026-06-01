@@ -28,6 +28,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import urllib.request
 from datetime import datetime, timezone
 
@@ -105,6 +106,36 @@ def measure_egress(host, port, count, interval_us):
     }
 
 
+def measure_rtsp(url, secs):
+    """Pull the real RTSP stream for `secs` and measure true bitrate + RTP loss.
+
+    RTSP metadata reports bit_rate=N/A, so we capture (copy, no re-encode) and
+    divide bytes by time. ffmpeg stderr RTP-miss/corrupt lines = video-path loss
+    proxy (closer to recognition-relevant loss than ICMP). Returns dict or None.
+    """
+    tmp = tempfile.NamedTemporaryFile(suffix=".ts", delete=False)
+    tmp.close()
+    try:
+        out = run(
+            ["ffmpeg", "-hide_banner", "-loglevel", "warning",
+             "-rtsp_transport", "tcp", "-i", url, "-t", str(secs),
+             "-c", "copy", "-f", "mpegts", "-y", tmp.name],
+            timeout=secs + 25,
+        )
+        size = os.path.getsize(tmp.name) if os.path.exists(tmp.name) else 0
+        if size == 0:
+            return {"ok": False, "bitrate_mbps": None, "rtp_loss_events": None}
+        loss_events = len(re.findall(r"missed|corrupt|concealing|RTP: ", out))
+        return {
+            "ok": True,
+            "bitrate_mbps": round(size * 8 / secs / 1e6, 2),
+            "rtp_loss_events": loss_events,
+        }
+    finally:
+        if os.path.exists(tmp.name):
+            os.unlink(tmp.name)
+
+
 def camera_tx_bytes(ip):
     """conntrack original-direction bytes for flows from this camera. Best-effort."""
     out = run(["conntrack", "-L", "--src", ip], timeout=10)
@@ -119,7 +150,7 @@ def camera_tx_bytes(ip):
 
 
 def load_cameras(path):
-    """CSV: id,ip  (header optional). Lines starting with # ignored."""
+    """CSV: id,ip[,rtsp_url]  (header + #comment lines ignored). rtsp_url optional."""
     cams = []
     if not path or not os.path.exists(path):
         return cams
@@ -129,9 +160,10 @@ def load_cameras(path):
                 continue
             cid = row[0].strip()
             ip = row[1].strip() if len(row) > 1 else ""
+            rtsp = row[2].strip() if len(row) > 2 else ""
             if cid.lower() in ("id", "camera_id") or not ip:
                 continue
-            cams.append({"id": cid, "ip": ip})
+            cams.append({"id": cid, "ip": ip, "rtsp": rtsp})
     return cams
 
 
@@ -145,6 +177,8 @@ def main():
     aws_host = env("AWS_PROBE_HOST", "s3.ap-southeast-1.amazonaws.com")
     aws_port = int(env("AWS_PROBE_PORT", "443"))
     collect_tx = env("COLLECT_TX", "1") == "1"
+    rtsp_probe = env("RTSP_PROBE", "0") == "1"
+    rtsp_secs = int(env("RTSP_PROBE_SECS", "5"))
 
     cams = load_cameras(cameras_file)
     results = []
@@ -161,6 +195,8 @@ def main():
             })
         if collect_tx:
             entry["tx_bytes"] = camera_tx_bytes(c["ip"])
+        if rtsp_probe and c["rtsp"]:
+            entry["rtsp"] = measure_rtsp(c["rtsp"], rtsp_secs)
         results.append(entry)
 
     payload = {

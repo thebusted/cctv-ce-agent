@@ -1,6 +1,7 @@
-# cctv-ce-agent camera list. Format: id,ip  (header + # comment lines ignored)
-# Copy to /etc/cctv-ce/cameras.csv and fill with REAL ids/IPs. Do NOT commit real IPs.
-id,ip
-CAM-001,10.0.0.11
-CAM-002,10.0.0.12
-CAM-003,10.0.0.13
+# cctv-ce-agent camera list. Format: id,ip[,rtsp_url]  (header + # comment lines ignored)
+# rtsp_url is optional — only needed when RTSP_PROBE=1 (real bitrate measurement).
+# Copy to /etc/cctv-ce/cameras.csv and fill with REAL values. Do NOT commit real IPs/creds.
+id,ip,rtsp_url
+CAM-001,10.0.0.11,rtsp://USER:PASS@GATEWAY:PORT/media/stream1
+CAM-002,10.0.0.12,rtsp://USER:PASS@GATEWAY:PORT/media/stream1
+CAM-003,10.0.0.13,
